@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema(
     loginAttempts: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },
     unlockAt: { type: Date },
-    tokens: TokensSchema,
+    tokens: { type: TokensSchema, default: null },
     isAdmin: {
       type: Boolean,
       default: false,

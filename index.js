@@ -20,10 +20,11 @@ mongoose
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/", (req, res) => res.status(200).json("index.html page"));
+
 app.use(authRoute);
 app.use(userRoute);
-
-// app.listen(PORT, () => console.log("Server started!"));
 
 app.listen(process.env.PORT || 5000, () => {
   console.log("Backend server is running!");

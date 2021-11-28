@@ -5,8 +5,6 @@ const moment = require("moment");
 const User = require("../models/User");
 const Tokens = require("../models/Tokens");
 
-
-
 const MAX_LOGIN_ATTEMPTS = 5; // after which the account should be locked
 const LOCK_DURATION = 60; // in minutes
 
@@ -14,40 +12,24 @@ const LOCK_DURATION = 60; // in minutes
 router.post("/register", async (req, res) => {
     
   try {
-    // Get user input
-    const { firstname, lastname, email, password, date_naissance, sexe } = req.body;
+        // Get user input
+        const { firstname, lastname, email, password, date_naissance, sexe } = req.body;
 
-    if (!(firstname || lastname || email || password || date_naissance || sexe)) {
-        res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
-    } 
+        if (!(firstname || lastname || email || password || date_naissance || sexe)) {
+            res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
+        } 
 
-    // Check if email already exists in the DB
+        // Check if email already exists in the DB
 
-    const oldUser = await User.findOne({ email });
+        const oldUser = await User.findOne({ email });
 
-    if (oldUser) {
-        return res.status(401).json({ error: true, message: "Votre mail n'est pas correct." })
-    }
+        if (oldUser) {
+            return res.status(401).json({ error: true, message: "Votre mail n'est pas correct." })
+        }
 
-    //Encrypt user password
-    encryptedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = new User({
-        firstname,
-        lastname,
-        email,
-        password: encryptedPassword,
-        date_naissance,
-        sexe,
-    });
-
-    const savedUser = await newUser.save();
-
-    if (savedUser) {
         // Create an access token
         const accessToken = jwt.sign(
         {
-            userId: savedUser._id,
             email,
         },
         process.env.ACCESS_TOKEN_SECRET_KEY,
@@ -57,38 +39,46 @@ router.post("/register", async (req, res) => {
         // Create a refresh token
         const refreshToken = jwt.sign(
             {
-                userId: savedUser._id,
                 email,
             },
             process.env.REFRESH_TOKEN_SECRET_KEY,
             { expiresIn: process.env.REFRESH_TOKEN_TTL }
         );
 
-        // const tokens = await Token.create({ accessToken, refreshToken });
-        const tokensToSave = new Tokens({ accessToken, refreshToken });
+        const tokensToSave = await new Tokens({ accessToken, refreshToken });
 
         const tokens = await tokensToSave.save();
 
+        //Encrypt user password
+        encryptedPassword = await bcrypt.hash(password, 10);
+
+        
         // Add tokens to the registered user
-        await User.findOneAndUpdate(
-            { email: savedUser.email },
-            {
-                $set: { tokens }
-            }
-        );
+
+        const newUser = new User({
+            firstname,
+            lastname,
+            email,
+            password: encryptedPassword,
+            date_naissance,
+            sexe,
+            tokens
+        });
+
+        const savedUser = await newUser.save();
 
         res.status(201).json(
             { 
                 error: false, 
                 message: "L'utilisateur a bien été créé avec succès.",
                 tokens: {
-                    token: accessToken,
-                    refreshToken: refreshToken,
-                    createdAt: tokens.createdAt
+                    token: savedUser.tokens.accessToken,
+                    refreshToken: savedUser.tokens.refreshToken,
+                    createdAt: savedUser.tokens.createdAt
                 }
             }
         );
-    }
+    // }
         
     } catch (err) {
         res.status(500).json({error: true, message: err.message});
