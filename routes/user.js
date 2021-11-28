@@ -1,6 +1,7 @@
+const router = require("express").Router();
 const User = require("../models/User");
 const { verifyToken } = require("../middleware/verifyToken");
-const router = require("express").Router();
+
 
 
 //GET USER
@@ -33,8 +34,14 @@ router.put("/user/:token", verifyToken, async (req, res) => {
           { error: true, message: "Aucun données n'a été envoyé." }
       );
 
-    if(req.user)
-      const userId = req.user._id;
+    console.log(req);
+
+    let userId = null;
+
+    if(req.user) {
+        console.log(req.user);
+        userId = req.user._id;
+    }
 
     try {
         await User.findOneAndUpdate(
@@ -63,8 +70,10 @@ router.put("/user/:token", verifyToken, async (req, res) => {
     ).toString();
   }
 
-   if(req.user)
-      const userId = req.user._id;
+   if(req.user) {
+        console.log(req.user);
+        userId = req.user._id;
+    }
 
   try {
     const updatedUser = await User.findOneAndUpdate(
@@ -100,8 +109,10 @@ router.get("/users/:token", verifyToken, async (req, res) => {
 // DELETE a User
 router.delete("/user/:token", verifyToken, async (req, res) => {
 
-  if(req.user)
-    const userId = req.user._id;
+  if(req.user) {
+        console.log(req.user);
+        userId = req.user._id;
+    }
 
   try {
 

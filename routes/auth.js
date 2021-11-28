@@ -1,9 +1,10 @@
+const router = require("express").Router();
+const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const moment = require("moment");
-const router = require("express").Router();
 const User = require("../models/User");
 const Tokens = require("../models/Tokens");
-const CryptoJS = require("crypto-js");
+
 
 
 const MAX_LOGIN_ATTEMPTS = 5; // after which the account should be locked
@@ -11,12 +12,13 @@ const LOCK_DURATION = 60; // in minutes
 
 // REGISTER User
 router.post("/register", async (req, res) => {
+    
   try {
     // Get user input
     const { firstname, lastname, email, password, date_naissance, sexe } = req.body;
 
     if (!(firstname || lastname || email || password || date_naissance || sexe)) {
-        return res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
+        res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
     } 
 
     // Check if email already exists in the DB
@@ -86,7 +88,7 @@ router.post("/register", async (req, res) => {
     }
         
     } catch (err) {
-        res.status(500).json(err);
+        res.status(500).json({error: true, message: err.message});
     }
 
 });
