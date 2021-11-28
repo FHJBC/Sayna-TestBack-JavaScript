@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const TokenSchema = require("./Tokens").TokenSchema;
+const TokensSchema = require("./Tokens");
 
 const UserSchema = new mongoose.Schema(
   {
@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema(
     loginAttempts: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },
     unlockAt: { type: Date },
-    tokens: { type: TokenSchema, default: null },
+    tokens: TokensSchema,
     isAdmin: {
       type: Boolean,
       default: false,

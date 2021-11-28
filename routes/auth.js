@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const CryptoJS = require("crypto-js");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const moment = require("moment");
 const User = require("../models/User");
@@ -29,14 +29,14 @@ router.post("/register", async (req, res) => {
         return res.status(401).json({ error: true, message: "Votre mail n'est pas correct." })
     }
 
+    //Encrypt user password
+    encryptedPassword = await bcrypt.hash(password, 10);
+
     const newUser = new User({
         firstname,
         lastname,
         email,
-        password: CryptoJS.AES.encrypt(
-            password,
-            process.env.PASS_SEC
-        ).toString(),
+        password: encryptedPassword,
         date_naissance,
         sexe,
     });
@@ -61,14 +61,17 @@ router.post("/register", async (req, res) => {
                 email,
             },
             process.env.REFRESH_TOKEN_SECRET_KEY,
-            { expiresIn: REFRESH_TOKEN_TTL }
+            { expiresIn: process.env.REFRESH_TOKEN_TTL }
         );
 
-        const tokens = await Tokens.create({ accessToken, refreshToken });
+        // const tokens = await Token.create({ accessToken, refreshToken });
+        const tokensToSave = new Tokens({ accessToken, refreshToken });
+
+        const tokens = await tokensToSave.save();
 
         // Add tokens to the registered user
         await User.findOneAndUpdate(
-            { email: user.email },
+            { email: savedUser.email },
             {
                 $set: { tokens }
             }
@@ -109,7 +112,7 @@ router.post('/login', async (req, res) => {
             }
         );
 
-        if (user.isLocked && user.unlockAt > new Date()) {
+        if (user && user.isLocked && user.unlockAt > new Date()) {
             return res.status(401).json(
                 {
                     error: true,
@@ -117,17 +120,10 @@ router.post('/login', async (req, res) => {
                 }
             );
         }
- 
-        const hashedPassword = CryptoJS.AES.decrypt(
-            user.password,
-            process.env.PASS_SEC
-        );
-
-        const originalPassword = hashedPassword.toString(CryptoJS.enc.Utf8);
         
         let attempts = user.loginAttempts;
 
-        if (!user || originalPassword != password) { 
+        if (user && !(await bcrypt.compare(password, user.password))) { 
 
             attempts += 1;
 
@@ -182,7 +178,7 @@ router.post('/login', async (req, res) => {
         );
 
     }catch(err){
-        res.status(500).json(err);
+        res.status(500).json({message: err.message});
     }
 
 });

@@ -20,8 +20,8 @@ mongoose
 
 app.use(cors());
 app.use(express.json());
-app.use("/api/auth", authRoute);
-app.use("/api/users", userRoute);
+app.use(authRoute);
+app.use(userRoute);
 
 // app.listen(PORT, () => console.log("Server started!"));
 
