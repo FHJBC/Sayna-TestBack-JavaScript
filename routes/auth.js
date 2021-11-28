@@ -1,9 +1,10 @@
 const router = require("express").Router();
 const User = require("../models/User");
+const Tokens = require("../models/Tokens");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 
-//REGISTER
+// REGISTER User
 router.post("/register", async (req, res) => {
   try {
     // Get user input
@@ -13,8 +14,7 @@ router.post("/register", async (req, res) => {
         return res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
     } 
 
-    // check if email already exists
-    // validate if email exist in the database
+    // check if email already exists in the DB
 
     const oldUser = await User.findOne({ email });
 
@@ -37,14 +37,36 @@ router.post("/register", async (req, res) => {
     const savedUser = await newUser.save();
 
     if (savedUser) {
+        // Create an access token
+        const accessToken = jwt.sign(
+        {
+            userId: savedUser._id,
+            email,
+        },
+        process.env.ACCESS_TOKEN_SECRET_KEY,
+            { expiresIn: process.env.ACCESS_TOKEN_TTL }
+        );
+  
+        // Create a refresh token
+        const refreshToken = jwt.sign(
+            {
+                userId: savedUser._id,
+                email,
+            },
+            process.env.REFRESH_TOKEN_SECRET_KEY,
+            { expiresIn: REFRESH_TOKEN_TTL }
+        );
+
+        const tokens = await Tokens.create({ accessToken, refreshToken });
+
         res.status(201).json(
             { 
                 error: false, 
                 message: "L'utilisateur a bien été créé avec succès.",
                 tokens: {
-                    token: accessToken,
-                    refreshToken: '',
-                    createdAt: ''
+                    token: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    createdAt: tokens.createdAt
                 }
             }
         );
@@ -56,7 +78,7 @@ router.post("/register", async (req, res) => {
 
 });
 
-//LOGIN
+// LOGIN User
 
 router.post('/login', async (req, res) => {
     try{
@@ -84,30 +106,24 @@ router.post('/login', async (req, res) => {
         } 
 
         // Create an access token
-        const accessToken = jwt.sign(
-        {
-            user_id: user._id,
-            isAdmin: user.isAdmin,
-            email,
-        },
-        process.env.TOKEN_PRIVATE_KEY,
-            { expiresIn:"2h" }
-        );
-  
-        // Create a refresh token
-
-
-        // save user token
-        user.token = token;
+        // const accessToken = jwt.sign(
+        // {
+        //     user_id: user._id,
+        //     isAdmin: user.isAdmin,
+        //     email,
+        // },
+        // process.env.TOKEN_PRIVATE_KEY,
+        //     { expiresIn:"2h" }
+        // );
 
         res.status(200).json(
             { 
                 error: false, 
                 message: "L'utilisateur a été authentifié avec succès.",
                 tokens: {
-                    token: accessToken,
-                    refreshToken: '',
-                    createdAt: ''
+                    token: user.tokens.accessToken,
+                    refreshToken: user.tokens.refreshToken,
+                    createdAt: user.tokens.createdAt
                 }
             }
         );

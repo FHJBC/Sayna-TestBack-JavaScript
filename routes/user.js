@@ -1,94 +1,83 @@
 const User = require("../models/User");
-const {
-  verifyToken,
-  verifyTokenAndAuthorization,
-  verifyTokenAndAdmin,
-} = require("./verifyToken");
-
+const { verifyToken } = require("../middleware/verifyToken");
 const router = require("express").Router();
 
 
 //GET USER
 router.get("/user/:token", verifyToken, async (req, res) => {
+  if (req.user) {
 
-    // validation format token
+    const { firstname, lastname, email, date_naissance, sexe, createdAt } = req.user;
 
-    // si token valide -> vérifier son existence dans la BDD
-
-    // si token n'est plus valide -> demander à l'utilisateur de le réinitialiser
-  try {
-
-    const user = await User.findOne(req.params.token);
-
-    if (!user) {
-        return res.status(401).json({ error: true, message: "Le token envoyé n'est pas conforme" });
-    }
-
-    res.status(200).json({
-        error: false,
-        user: {
-            firstName: '',
-            lastName: '',
-            email: '',
-            date_naissance: '',
-            sexe: '',
-            createdAt: ''
-        }
-    });
-
-
-  } catch (err) {
-    res.status(500).json(err);
+    return res.status(200).json({
+            error: false,
+            user: {
+                firstname,
+                lastname,
+                email,
+                date_naissance,
+                sexe,
+                createdAt
+            }
+        });
   }
 });
 
 //UPDATE a User
-router.put("/user/:token", verifyTokenAndAuthorization, async (req, res) => {
+router.put("/user/:token", verifyToken, async (req, res) => {
 
-    // validation format token
+    const { firstname, lastname, date_naissance, sexe } = req.body;
 
-    // si token valide -> vérifier son existence dans la BDD
+    if(!(firstname && lastname && date_naissance && sexe))
+      return res.status(401).json(
+          { error: true, message: "Aucun données n'a été envoyé." }
+      );
 
-    // si token n'est plus valide -> demander à l'utilisateur de le réinitialiser
+    if(req.user)
+      const userId = req.user._id;
 
     try {
-        const updatedProduct = await User.findOneAndUpdate(
-        req.params.token,
-        {
-            $set: req.body,
-        },
-        { new: true }
+        await User.findOneAndUpdate(
+          userId,
+          {
+              $set: req.body,
+          },
+          { new: true }
         );
-        res.status(200).json(updatedProduct);
+        res.status(200).json(
+          { error: false, message: "L'utilisateur a été modifié avec succès."  }
+        );
     } catch (err) {
         res.status(500).json(err);
     }
 });
 
 
-
 //UPDATE Password
-router.put("/user/:token", verifyTokenAndAuthorization, async (req, res) => {
+router.put("/user/:token", verifyToken, async (req, res) => {
 
-    newPassword = req.body.password
-
-  if (newPassword) {
-    newPassword = CryptoJS.AES.encrypt(
-      newPassword,
+  if (req.body.password) {
+    req.body.password = CryptoJS.AES.encrypt(
+      req.body.password,
       process.env.PASS_SEC
     ).toString();
   }
 
+   if(req.user)
+      const userId = req.user._id;
+
   try {
     const updatedUser = await User.findOneAndUpdate(
-      req.params.token,
+      userId,
       {
         $set: req.body,
       },
       { new: true }
     );
 
-    res.status(200).json(updatedUser);
+    res.status(200).json(
+        { error: false, message: "Le mot de passe a été modifié avec succès."  }
+    );
 
   } catch (err) {
     res.status(500).json(err);
@@ -96,22 +85,12 @@ router.put("/user/:token", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 //GET ALL USERS
-router.get("/users/:token", verifyTokenAndAdmin, async (req, res) => {
-    token = req.params.token
-  
-    // validation format token
-
-    // si token valide -> vérifier son existence dans la BDD
-
-    // si token n'est plus valide -> demander à l'utilisateur de le réinitialiser
+router.get("/users/:token", verifyToken, async (req, res) => {
 
   try {
     const users = await User.find();
 
-    
-    // res.status(200).json(users);
-
-    res.status(200).send({ error: false, ...users })
+    res.status(200).json({ error: false, ...users });
 
   } catch (err) {
     res.status(500).json(err);
@@ -119,11 +98,19 @@ router.get("/users/:token", verifyTokenAndAdmin, async (req, res) => {
 });
 
 // DELETE a User
-router.delete("/user/:token", verifyTokenAndAuthorization, async (req, res) => {
-  try {
-    await User.findOneAndDelete(req.params.token);
+router.delete("/user/:token", verifyToken, async (req, res) => {
 
-    res.status(200).json({ error: false, message: "L'utilisateur a été déconnecté avec succès." });
+  if(req.user)
+    const userId = req.user._id;
+
+  try {
+
+    await User.findOneAndDelete({_id: userId});
+
+    res.status(200).json(
+      { error: false, message: "L'utilisateur a été déconnecté avec succès." }
+    );
+
   } catch (err) {
     res.status(500).json(err);
   }

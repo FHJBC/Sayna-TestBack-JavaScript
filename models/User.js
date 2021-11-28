@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     date_naissance: { type: Date },
     sexe: { type: String, required: true },
-    token: { type: String },
+    // token: { type: String },
     isAdmin: {
       type: Boolean,
       default: false,
