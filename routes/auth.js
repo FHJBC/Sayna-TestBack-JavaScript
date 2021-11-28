@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const moment = require("moment");
 const User = require("../models/User");
 const Tokens = require("../models/Tokens");
 
@@ -45,7 +44,7 @@ router.post("/register", async (req, res) => {
             { expiresIn: process.env.REFRESH_TOKEN_TTL }
         );
 
-        const tokensToSave = await new Tokens({ accessToken, refreshToken });
+        const tokensToSave = new Tokens({ accessToken, refreshToken });
 
         const tokens = await tokensToSave.save();
 
@@ -78,8 +77,7 @@ router.post("/register", async (req, res) => {
                 }
             }
         );
-    // }
-        
+
     } catch (err) {
         res.status(500).json({error: true, message: err.message});
     }
@@ -100,7 +98,7 @@ router.post('/login', async (req, res) => {
             {
                 email
             }
-        );
+        ).populate("tokens", "-__v").select("-__v");
 
         if (user && user.isLocked && user.unlockAt > new Date()) {
             return res.status(401).json(

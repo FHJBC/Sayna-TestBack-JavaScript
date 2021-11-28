@@ -1,7 +1,7 @@
 const router = require("express").Router();
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { verifyToken } = require("../middleware/verifyToken");
-
 
 
 //GET USER
@@ -27,77 +27,62 @@ router.get("/user/:token", verifyToken, async (req, res) => {
 //UPDATE a User
 router.put("/user/:token", verifyToken, async (req, res) => {
 
-    const { firstname, lastname, date_naissance, sexe } = req.body;
-
-    if(!(firstname && lastname && date_naissance && sexe))
+    if( Object.keys(req.body).length === 0)
       return res.status(401).json(
-          { error: true, message: "Aucun données n'a été envoyé." }
+          { error: true, message: "Aucune données n'a été envoyé." }
       );
 
-    console.log(req);
-
-    let userId = null;
-
     if(req.user) {
-        console.log(req.user);
-        userId = req.user._id;
+
+        try {
+            await User.findOneAndUpdate(
+              req.user._id,
+              {
+                  $set: req.body,
+              },
+              { new: true }
+            );
+            res.status(200).json(
+              { error: false, message: "L'utilisateur a été modifié avec succès."  }
+            );
+        } catch (err) {
+            res.status(500).json({ error: true, message: err.message });
+        }
     }
 
-    try {
-        await User.findOneAndUpdate(
-          userId,
-          {
-              $set: req.body,
-          },
-          { new: true }
-        );
-        res.status(200).json(
-          { error: false, message: "L'utilisateur a été modifié avec succès."  }
-        );
-    } catch (err) {
-        res.status(500).json(err);
-    }
 });
 
 
 //UPDATE Password
-router.put("/user/:token", verifyToken, async (req, res) => {
+router.put("/user/pwd/:token", verifyToken, async (req, res) => {
 
-  if (req.body.password) {
-    req.body.password = CryptoJS.AES.encrypt(
-      req.body.password,
-      process.env.PASS_SEC
-    ).toString();
+  if (req.body.password && req.user) {
+    //Encrypt user password
+      encryptedPassword = await bcrypt.hash(req.body.password, 10);
+      try {
+            await User.findOneAndUpdate(
+              req.user._id,
+              {
+                $set: { password: encryptedPassword },
+              }
+            );
+
+            res.status(200).json(
+                { error: false, message: "Le mot de passe a été modifié avec succès."  }
+            );
+
+      } catch (err) {
+        res.status(500).json({ error: true, message: err.message });
+      }
   }
-
-   if(req.user) {
-        console.log(req.user);
-        userId = req.user._id;
-    }
-
-  try {
-    const updatedUser = await User.findOneAndUpdate(
-      userId,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    );
-
-    res.status(200).json(
-        { error: false, message: "Le mot de passe a été modifié avec succès."  }
-    );
-
-  } catch (err) {
-    res.status(500).json(err);
-  }
+  
 });
 
 //GET ALL USERS
 router.get("/users/:token", verifyToken, async (req, res) => {
 
   try {
-    const users = await User.find();
+    const users = await User.find().populate("tokens", "-__v").select("-__v");
 
     res.status(200).json({ error: false, ...users });
 
@@ -110,21 +95,21 @@ router.get("/users/:token", verifyToken, async (req, res) => {
 router.delete("/user/:token", verifyToken, async (req, res) => {
 
   if(req.user) {
-        console.log(req.user);
-        userId = req.user._id;
+        // console.log(req.user);
+
+        try {
+      
+          await User.findOneAndDelete({_id: req.user._id});
+      
+          res.status(200).json(
+            { error: false, message: "L'utilisateur a été déconnecté avec succès." }
+          );
+      
+        } catch (err) {
+          res.status(500).json({ error: true, message: err.message });
+        }
     }
 
-  try {
-
-    await User.findOneAndDelete({_id: userId});
-
-    res.status(200).json(
-      { error: false, message: "L'utilisateur a été déconnecté avec succès." }
-    );
-
-  } catch (err) {
-    res.status(500).json(err);
-  }
 });
 
 

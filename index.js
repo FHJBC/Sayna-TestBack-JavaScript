@@ -31,6 +31,11 @@ app.get('/', function (req, res) {
 app.use(authRoute);
 app.use(userRoute);
 
+//The 404 Route (ALWAYS Keep this as the last route)
+app.get('*', function(req, res){
+  res.render("404.html");
+});
+
 app.listen(process.env.PORT || 5000, () => {
   console.log("Backend server is running!");
 });

@@ -8,8 +8,4 @@ const TokensSchema = new mongoose.Schema(
   }
 );
 
-// const Tokens = mongoose.model("Tokens", TokensSchema);
-
 module.exports = mongoose.model("Tokens", TokensSchema);
-
-module.exports = { TokensSchema }

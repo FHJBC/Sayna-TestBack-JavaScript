@@ -1,34 +1,35 @@
 const jwt = require("jsonwebtoken");
 const Tokens = require("../models/Tokens");
 const User = require("../models/User");
-const { verifyJWT } = require("../utils/jwt.utils");
+const  verifyJWT = require("../utils/jwt.utils");
 
 const verifyToken = async (req, res, next) => {
   try {
    
-    const { token } = req.params;
-    
+    const token = req.params.token;
+  
      // validation format token
-    const { payload } = verifyJWT(token);
+    const { payload, expired } = await verifyJWT(token);
     
-    if (payload === null) {
+    if (payload === null && expired ===false) {
       return res.status(401).json(
         { error: true, message: "Le token envoyé n'est pas conforme." }
       );
     } else {
       // si token valide -> vérifier son existence dans la BDD
-      tokenInDB = Tokens.findOne({ accessToken: token })
+      tokenInDB = await Tokens.findOne({ accessToken: token })
       if (!tokenInDB) {
         return res.status(401).json(
           { error: true, message: "Le token envoyé n'existe pas." }
         ); 
       } else {
         // si token n'est plus valide -> demander à l'utilisateur de le réinitialiser
+        
         const { accessToken } = tokenInDB;
 
-        const { payload, expired  } = verifyJWT(accessToken);
+        const { payload, expired } = await verifyJWT(accessToken);
 
-        const { userId } = payload;
+        const email = payload !== null ? payload.email : null;
 
         if (expired) {
           return res.status(401).json(
@@ -36,42 +37,22 @@ const verifyToken = async (req, res, next) => {
           );    
         }
 
-        const user = await User.findById(userId);
+        if (email) {
+          const user = await User.findOne({ email });
 
-        req.user = user;
+          req.user = user;
 
-        next();
+          next();
+        }
 
       }
     }
 
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({message: err.message});
   }
 };
 
-const verifyTokenAndAuthorization = (req, res, next) => {
-  verifyToken(req, res, () => {
-    if (req.user.id === req.params.id || req.user.isAdmin) {
-      next();
-    } else {
-      res.status(403).json("You are not alowed to do that!");
-    }
-  });
-};
-
-const verifyTokenAndAdmin = (req, res, next) => {
-  verifyToken(req, res, () => {
-    if (req.user.isAdmin) {
-      next();
-    } else {
-      res.status(403).json("You are not alowed to do that!");
-    }
-  });
-};
-
 module.exports = {
-  verifyToken,
-  verifyTokenAndAuthorization,
-  verifyTokenAndAdmin,
+  verifyToken
 };
