@@ -12,4 +12,4 @@ const TokensSchema = new mongoose.Schema(
 
 module.exports = mongoose.model("Tokens", TokensSchema);
 
-module.exports = TokensSchema;
+module.exports = { TokensSchema }

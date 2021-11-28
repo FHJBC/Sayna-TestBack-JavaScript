@@ -4,6 +4,8 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
+const path = require("path");
+
 
 const app = express();
 
@@ -20,8 +22,11 @@ mongoose
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'views')));
 
-app.get("/", (req, res) => res.status(200).json("index.html page"));
+app.get('/', function (req, res) {
+  res.render("index.html");
+})
 
 app.use(authRoute);
 app.use(userRoute);
