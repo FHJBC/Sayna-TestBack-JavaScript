@@ -1,8 +1,13 @@
+const jwt = require("jsonwebtoken");
+const moment = require("moment");
 const router = require("express").Router();
 const User = require("../models/User");
 const Tokens = require("../models/Tokens");
 const CryptoJS = require("crypto-js");
-const jwt = require("jsonwebtoken");
+
+
+const MAXL_LOGIN_ATTEMPTS = 5; // after which the account should be locked
+const LOCK_DURATION = 60; // in minutes
 
 // REGISTER User
 router.post("/register", async (req, res) => {
@@ -14,7 +19,7 @@ router.post("/register", async (req, res) => {
         return res.status(401).json({ error: true, message: "L'une ou plusieurs des données obligatoires sont manquantes." });
     } 
 
-    // check if email already exists in the DB
+    // Check if email already exists in the DB
 
     const oldUser = await User.findOne({ email });
 
@@ -59,13 +64,21 @@ router.post("/register", async (req, res) => {
 
         const tokens = await Tokens.create({ accessToken, refreshToken });
 
+        // Add tokens to the registered user
+        await User.findOneAndUpdate(
+            { email: user.email },
+            {
+                $set: { tokens }
+            }
+        );
+
         res.status(201).json(
             { 
                 error: false, 
                 message: "L'utilisateur a bien été créé avec succès.",
                 tokens: {
-                    token: tokens.accessToken,
-                    refreshToken: tokens.refreshToken,
+                    token: accessToken,
+                    refreshToken: refreshToken,
                     createdAt: tokens.createdAt
                 }
             }
@@ -90,10 +103,19 @@ router.post('/login', async (req, res) => {
 
         const user = await User.findOne(
             {
-                email,
+                email
             }
         );
 
+        if (user.isLocked && user.unlockAt > new Date()) {
+            return res.status(401).json(
+                {
+                    error: true,
+                    message: `Trop de tentatives sur l'email ${email} - Veuillez patienter 1h`
+                }
+            );
+        }
+ 
         const hashedPassword = CryptoJS.AES.decrypt(
             user.password,
             process.env.PASS_SEC
@@ -101,29 +123,58 @@ router.post('/login', async (req, res) => {
 
         const originalPassword = hashedPassword.toString(CryptoJS.enc.Utf8);
         
-        if (!user || originalPassword != password) {           
-            return res.status(401).json({ error: true, message: "Votre email ou password est erroné." });
+        let attempts = user.loginAttempts;
+
+        if (!user || originalPassword != password) { 
+
+            attempts += 1;
+
+            const updatedUser = await User.findOneAndUpdate(
+                { email: user.email },
+                {
+                    $set: { loginAttempts: attempts }
+                },
+                { new: true }
+            );
+
+            if (updatedUser.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+
+                let d = new Date();
+
+                d.setMinutes(d.getMinutes() + LOCK_DURATION);
+
+                await User.findOneAndUpdate(
+                    { email: user.email },
+                    {
+                        $set: { isLocked: true, unlockAt: d }
+                    }
+                );
+            }
+
+            return res.status(401).json(
+                { 
+                    error: true, message: "Votre email ou password est erroné." 
+                }
+            );
         } 
 
-        // Create an access token
-        // const accessToken = jwt.sign(
-        // {
-        //     user_id: user._id,
-        //     isAdmin: user.isAdmin,
-        //     email,
-        // },
-        // process.env.TOKEN_PRIVATE_KEY,
-        //     { expiresIn:"2h" }
-        // );
+        await User.findOneAndUpdate(
+            { email: user.email },
+            {
+                $set: { loginAttempts: 0, isLocked: false, unlockAt: null }
+            }
+        );
+
+        const { accessToken, refreshToken, createdAt } = user.tokens;
 
         res.status(200).json(
             { 
                 error: false, 
                 message: "L'utilisateur a été authentifié avec succès.",
                 tokens: {
-                    token: user.tokens.accessToken,
-                    refreshToken: user.tokens.refreshToken,
-                    createdAt: user.tokens.createdAt
+                    token: accessToken,
+                    refreshToken: refreshToken,
+                    createdAt: createdAt
                 }
             }
         );
