@@ -6,7 +6,7 @@ const Tokens = require("../models/Tokens");
 const CryptoJS = require("crypto-js");
 
 
-const MAXL_LOGIN_ATTEMPTS = 5; // after which the account should be locked
+const MAX_LOGIN_ATTEMPTS = 5; // after which the account should be locked
 const LOCK_DURATION = 60; // in minutes
 
 // REGISTER User
