@@ -95,7 +95,6 @@ router.get("/users/:token", verifyToken, async (req, res) => {
 router.delete("/user/:token", verifyToken, async (req, res) => {
 
   if(req.user) {
-        // console.log(req.user);
 
         try {
       

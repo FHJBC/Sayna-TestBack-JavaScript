@@ -10,7 +10,7 @@ const app = express();
 
 dotenv.config();
 
-// const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(process.env.MONGO_URL)
@@ -30,11 +30,11 @@ app.get('/',  (req, res) => {
 app.use(authRoute);
 app.use(userRoute);
 
-//The 404 Route (ALWAYS Keep this as the last route)
+// The 404 Route (ALWAYS keep this as the last route)
 app.get('*', (req, res) => {
   res.status(404).sendFile(__dirname + '/public/404.html');
 });
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log("Backend server is running!");
+app.listen(PORT, () => {
+  console.log(`Backend server is running and listening on port: ${PORT}`);
 });
