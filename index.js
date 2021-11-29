@@ -4,7 +4,6 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
-const path = require("path");
 
 
 const app = express();
@@ -22,18 +21,18 @@ mongoose
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'views')));
+// app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', function (req, res) {
-  res.render("index.html");
+app.get('/',  (req, res) => {
+  res.status(200).sendFile(__dirname + '/public/index.html');
 })
 
 app.use(authRoute);
 app.use(userRoute);
 
 //The 404 Route (ALWAYS Keep this as the last route)
-app.get('*', function(req, res){
-  res.render("404.html");
+app.get('*', (req, res) => {
+  res.status(404).sendFile(__dirname + '/public/404.html');
 });
 
 app.listen(process.env.PORT || 5000, () => {
